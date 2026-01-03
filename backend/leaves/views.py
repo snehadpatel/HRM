@@ -63,6 +63,8 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = self.queryset
+        with open('debug_leaves.log', 'a') as f:
+            f.write(f"DEBUG LEAVES: User {user.email}, Role {user.role}, Total Count {queryset.count()}\n")
         
         # Admin/HR see all requests
         if user.role not in ['admin', 'hr']:
@@ -81,6 +83,9 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         if employee_id and user.role in ['admin', 'hr']:
             queryset = queryset.filter(employee__employee_id=employee_id)
         
+        with open('debug_leaves.log', 'a') as f:
+            f.write(f"DEBUG LEAVES END: User {user.email}, Count {queryset.count()}\n")
+
         return queryset
     
     def create(self, request, *args, **kwargs):
@@ -123,9 +128,12 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         """Approve a leave request."""
         leave_request = self.get_object()
         
+        with open('debug_leaves.log', 'a') as f:
+            f.write(f"DEBUG APPROVE: Request ID {pk}, Current Status '{leave_request.status}', User {request.user.email}\n")
+        
         if leave_request.status != 'pending':
             return Response(
-                {'error': 'Only pending requests can be approved'},
+                {'error': f'Only pending requests can be approved. Current status: {leave_request.status}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
             

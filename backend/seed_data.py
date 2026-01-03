@@ -11,7 +11,9 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dayflow.settings')
 django.setup()
 
 from datetime import date, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
+import random
 from django.utils import timezone
 from accounts.models import User, CompanySettings
 from employees.models import Employee
@@ -410,7 +412,6 @@ def create_seed_data():
     # Include HR and Admin in attendance generation if they have employee records
     all_employees = list(Employee.objects.all())
     
-    import random
     
     current_date = start_date
     while current_date <= end_date:

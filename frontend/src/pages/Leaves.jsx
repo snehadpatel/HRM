@@ -108,6 +108,10 @@ function Leaves() {
         return statusMatch && employeeMatch
     })
 
+    console.log('DEBUG LEAVES: All Requests:', requests.map(r => ({ id: r.id, status: r.status, emp: r.employee_name })))
+    console.log('DEBUG LEAVES: Filtered Requests:', filteredRequests.length)
+    console.log('DEBUG LEAVES: Current Filter:', filter)
+
     const getCurrentEmployeeId = () => {
         if (!user || employees.length === 0) return null
         const emp = employees.find(e => e.user?.email === user.email)

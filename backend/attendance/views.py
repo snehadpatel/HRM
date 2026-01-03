@@ -152,12 +152,15 @@ class AttendanceListView(generics.ListAPIView):
         
         # Apply filters
         employee_id = self.request.query_params.get('employee_id')
+        employee_pk = self.request.query_params.get('employee')
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
         status_filter = self.request.query_params.get('status')
         
         if employee_id and user.role in ['admin', 'hr']:
             queryset = queryset.filter(employee__employee_id=employee_id)
+        if employee_pk and user.role in ['admin', 'hr']:
+            queryset = queryset.filter(employee__id=employee_pk)
         if start_date:
             queryset = queryset.filter(date__gte=start_date)
         if end_date:
@@ -177,10 +180,15 @@ class WeeklyAttendanceView(APIView):
         try:
             employee = Employee.objects.get(user=request.user)
         except Employee.DoesNotExist:
-            return Response(
-                {'error': 'Employee profile not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            # If admin/HR without profile, return empty structure (Admin view)
+            today = timezone.now().date()
+            start_of_week = today - timedelta(days=today.weekday())
+            end_of_week = start_of_week + timedelta(days=6)
+            return Response({
+                'week_start': start_of_week,
+                'week_end': end_of_week,
+                'records': []
+            })
         
         # Get date range for current week
         today = timezone.now().date()
