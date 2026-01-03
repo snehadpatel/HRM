@@ -332,11 +332,11 @@ def create_seed_data():
 
     # Create Sample Leave Requests
     print("Creating sample leave requests...")
-    import random
-    from datetime import timedelta
     
-    # Reload leave types
-    leave_types = {lt.name: lt for lt in LeaveType.objects.all()}
+    # Reload leave types if needed, or use existing map
+    # leave_types was defined earlier, but let's ensure we have fresh objects if needed
+    # Actually, relying on the earlier dict is safer or just fetching again
+    leave_types_map = {lt.name: lt for lt in LeaveType.objects.all()}
     
     status_choices = ['pending', 'approved', 'rejected']
     
@@ -359,8 +359,8 @@ def create_seed_data():
             end_date = start_date + timedelta(days=duration - 1)
             
             # Pick a random leave type
-            lt_name = random.choice(list(leave_types.keys()))
-            lt = leave_types[lt_name]
+            lt_name = random.choice(list(leave_types_map.keys()))
+            lt = leave_types_map[lt_name]
             
             status_val = random.choice(status_choices)
             
@@ -373,8 +373,6 @@ def create_seed_data():
                 reason = "Not feeling well"
             elif lt_name == 'Paid Time Off':
                 reason = "Family vacation"
-            
-            # Check for overlapping requests? Skipping for simplicity in seeding
             
             lr = LeaveRequest.objects.create(
                 employee=emp,
@@ -390,8 +388,7 @@ def create_seed_data():
                 lr.reviewed_at = timezone.now() - timedelta(days=2)
                 lr.save()
                 
-                # Update allocation
-                from leaves.models import LeaveAllocation
+                # Update allocation (using global import)
                 alloc = LeaveAllocation.objects.filter(employee=emp, leave_type=lt, year=start_date.year).first()
                 if alloc:
                     alloc.used_days += lr.total_days
