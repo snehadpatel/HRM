@@ -15,7 +15,7 @@ If you are on Mac, you can likely just run this in your terminal:
 createdb dayflow
 ```
 
-*Note: The settings are configured for user `snehapatel` with no password on localhost:5432. If your config is different, check `backend/dayflow/settings.py`.*
+*Note: The settings are configured for my user `snehapatel` with no password on localhost:5432. If your config is different, check `backend/dayflow/settings.py`.*
 
 ## 2. Backend Setup
 Open a terminal and go to the backend folder:
