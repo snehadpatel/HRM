@@ -85,6 +85,92 @@ const EmployeeDetailModal = ({ employee, onClose, departments }) => {
             <div className="bio-box">
                 {employee.about_me || "No bio available."}
             </div>
+
+            {employee.job_passion && (
+                <>
+                    <h4 className="subsection-title">Passion</h4>
+                    <p className="text-secondary">{employee.job_passion}</p>
+                </>
+            )}
+
+            {(employee.skills && employee.skills.length > 0) && (
+                <>
+                    <h4 className="subsection-title">Skills</h4>
+                    <div className="tags-container">
+                        {employee.skills.map((skill, i) => (
+                            <span key={i} className="tag">{skill}</span>
+                        ))}
+                    </div>
+                </>
+            )}
+            {(employee.interests && employee.interests.length > 0) && (
+                <>
+                    <h4 className="subsection-title">Interests</h4>
+                    <div className="tags-container">
+                        {employee.interests.map((interest, i) => (
+                            <span key={i} className="tag tag-secondary">{interest}</span>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
+    )
+
+    const renderPersonal = () => (
+        <div className="detail-section">
+            <h4 className="subsection-title mt-0">Personal Information</h4>
+            <div className="detail-grid">
+                <div className="info-group">
+                    <label>Date of Birth</label>
+                    <div className="value">{employee.date_of_birth || '-'}</div>
+                </div>
+                <div className="info-group">
+                    <label>Gender</label>
+                    <div className="value" style={{ textTransform: 'capitalize' }}>{employee.gender || '-'}</div>
+                </div>
+                <div className="info-group">
+                    <label>Marital Status</label>
+                    <div className="value" style={{ textTransform: 'capitalize' }}>{employee.marital_status || '-'}</div>
+                </div>
+                <div className="info-group">
+                    <label>Personal Email</label>
+                    <div className="value">{employee.personal_email || '-'}</div>
+                </div>
+                <div className="info-group full-width">
+                    <label>Address</label>
+                    <div className="value">{employee.address || '-'}</div>
+                </div>
+            </div>
+
+            <div className="divider"></div>
+
+            <h4 className="subsection-title">Bank & Statutory Details</h4>
+            <div className="detail-grid">
+                <div className="info-group">
+                    <label>Bank Name</label>
+                    <div className="value">{employee.bank_name || '-'}</div>
+                </div>
+                <div className="info-group">
+                    <label>Account Number</label>
+                    <div className="value">{employee.bank_account || '-'}</div>
+                </div>
+                <div className="info-group">
+                    <label>IFSC Code</label>
+                    <div className="value">{employee.ifsc_code || '-'}</div>
+                </div>
+                <div className="info-group">
+                    <label>PAN Number</label>
+                    <div className="value">{employee.pan_number || '-'}</div>
+                </div>
+                <div className="info-group">
+                    <label>UAN</label>
+                    <div className="value">{employee.uan_number || '-'}</div>
+                </div>
+                <div className="info-group">
+                    <label>EPF Code</label>
+                    <div className="value">{employee.epf_code || '-'}</div>
+                </div>
+            </div>
         </div>
     )
 
@@ -220,7 +306,7 @@ const EmployeeDetailModal = ({ employee, onClose, departments }) => {
                         <button className="close-btn" onClick={onClose}>×</button>
                     </div>
                     <div className="profile-tabs">
-                        {['overview', 'salary', 'attendance', 'leaves'].map(tab => (
+                        {['overview', 'personal', 'salary', 'attendance', 'leaves'].map(tab => (
                             <button
                                 key={tab}
                                 className={`profile-tab ${activeTab === tab ? 'active' : ''}`}
@@ -238,6 +324,7 @@ const EmployeeDetailModal = ({ employee, onClose, departments }) => {
                     ) : (
                         <>
                             {activeTab === 'overview' && renderOverview()}
+                            {activeTab === 'personal' && renderPersonal()}
                             {activeTab === 'salary' && renderSalary()}
                             {activeTab === 'attendance' && renderAttendance()}
                             {activeTab === 'leaves' && renderLeaves()}
@@ -381,6 +468,21 @@ const EmployeeDetailModal = ({ employee, onClose, departments }) => {
                 .status-badge.approved { background: #dcfce7; color: #166534; }
                 .status-badge.pending { background: #ffedd5; color: #9a3412; }
                 .status-badge.rejected { background: #fee2e2; color: #991b1b; }
+
+                 /* Profile Additional Styles */
+                .tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+                .tag {
+                    background: #eff6ff;
+                    color: #1d4ed8;
+                    padding: 4px 12px;
+                    border-radius: 16px;
+                    font-size: 0.8rem;
+                    font-weight: 500;
+                }
+                .tag-secondary { background: #f1f5f9; color: #475569; }
+                .divider { height: 1px; background: var(--border-color); margin: 32px 0; }
+                .mt-0 { margin-top: 0; }
+                .full-width { grid-column: 1 / -1; }
             `}</style>
         </div>
     )
