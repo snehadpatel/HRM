@@ -6,6 +6,7 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import Dashboard from './pages/Dashboard'
 import Employees from './pages/Employees'
+import EmployeeProfile from './pages/EmployeeProfile'
 import Attendance from './pages/Attendance'
 import Leaves from './pages/Leaves'
 import Payroll from './pages/Payroll'
@@ -72,6 +73,7 @@ function App() {
 
                 {/* Admin/HR Only Routes */}
                 <Route path="employees" element={<AdminRoute><Employees /></AdminRoute>} />
+                <Route path="employees/:id" element={<AdminRoute><EmployeeProfile /></AdminRoute>} />
             </Route>
 
             {/* Catch all */}

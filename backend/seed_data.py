@@ -329,7 +329,82 @@ def create_seed_data():
             
             created_employees.append(employee)
             print(f"  Created employee: {user.full_name} (Login ID: {user.login_id})")
+
+    # Create Sample Leave Requests
+    print("Creating sample leave requests...")
+    import random
+    from datetime import timedelta
     
+    # Reload leave types
+    leave_types = {lt.name: lt for lt in LeaveType.objects.all()}
+    
+    status_choices = ['pending', 'approved', 'rejected']
+    
+    # Helper to get day of week
+    def is_weekend(d):
+        return d.weekday() >= 5
+
+    for emp in created_employees:
+        # Create 3-5 leave requests per employee
+        for _ in range(random.randint(3, 5)):
+            # Random date within last 60 days or next 30 days
+            days_offset = random.randint(-60, 30)
+            start_date = timezone.now().date() + timedelta(days=days_offset)
+            
+            # Avoid starting on weekends
+            while is_weekend(start_date):
+                 start_date += timedelta(days=1)
+            
+            duration = random.randint(1, 3)
+            end_date = start_date + timedelta(days=duration - 1)
+            
+            # Pick a random leave type
+            lt_name = random.choice(list(leave_types.keys()))
+            lt = leave_types[lt_name]
+            
+            status_val = random.choice(status_choices)
+            
+            # If date is in future, bias towards pending
+            if start_date > timezone.now().date() and random.random() > 0.3:
+                status_val = 'pending'
+            
+            reason = f"Personal reason for {lt_name}"
+            if lt_name == 'Sick Time Off':
+                reason = "Not feeling well"
+            elif lt_name == 'Paid Time Off':
+                reason = "Family vacation"
+            
+            # Check for overlapping requests? Skipping for simplicity in seeding
+            
+            lr = LeaveRequest.objects.create(
+                employee=emp,
+                leave_type=lt,
+                start_date=start_date,
+                end_date=end_date,
+                reason=reason,
+                status=status_val
+            )
+            
+            if status_val == 'approved':
+                lr.reviewed_by = hr_user
+                lr.reviewed_at = timezone.now() - timedelta(days=2)
+                lr.save()
+                
+                # Update allocation
+                from leaves.models import LeaveAllocation
+                alloc = LeaveAllocation.objects.filter(employee=emp, leave_type=lt, year=start_date.year).first()
+                if alloc:
+                    alloc.used_days += lr.total_days
+                    alloc.save()
+                    
+            elif status_val == 'rejected':
+                lr.review_notes = "Manpower shortage"
+                lr.reviewed_by = hr_user
+                lr.reviewed_at = timezone.now() - timedelta(days=2)
+                lr.save()
+                
+    print("  Created sample leave requests.")
+
     # Create sample attendance records for last 30 days
     print("Creating sample attendance history...")
     end_date = timezone.now().date()

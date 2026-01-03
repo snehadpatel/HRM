@@ -48,6 +48,15 @@ class SalaryStructureViewSet(viewsets.ModelViewSet):
             except Employee.DoesNotExist:
                 return SalaryStructure.objects.none()
         
+        # Apply filters for Admin/HR
+        employee_id = self.request.query_params.get('employee_id')
+        employee_pk = self.request.query_params.get('employee')
+        
+        if employee_id:
+            return self.queryset.filter(employee__employee_id=employee_id)
+        if employee_pk:
+            return self.queryset.filter(employee__id=employee_pk)
+            
         return self.queryset
     
     @action(detail=False, methods=['get'])
