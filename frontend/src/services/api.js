@@ -69,9 +69,11 @@ export const employeesAPI = {
     getAll: (params) => api.get('/employees/', { params }),
     getById: (id) => api.get(`/employees/${id}/`),
     getMe: () => api.get('/employees/me/'),
+    getMyProfile: () => api.get('/employees/me/'),
     create: (data) => api.post('/employees/', data),
     update: (id, data) => api.patch(`/employees/${id}/`, data),
     delete: (id) => api.delete(`/employees/${id}/`),
+    getSalary: (employeeId) => api.get(`/payroll/salaries/?employee=${employeeId}`),
 }
 
 export const attendanceAPI = {
@@ -95,9 +97,17 @@ export const leavesAPI = {
 }
 
 export const payrollAPI = {
+    // Templates
+    getTemplates: () => api.get('/payroll/templates/'),
+    createTemplate: (data) => api.post('/payroll/templates/', data),
+    updateTemplate: (id, data) => api.patch(`/payroll/templates/${id}/`, data),
+    deleteTemplate: (id) => api.delete(`/payroll/templates/${id}/`),
+
+    // Salaries
     getSalaries: (params) => api.get('/payroll/salaries/', { params }),
     getMySalary: () => api.get('/payroll/salaries/my_salary/'),
     createSalary: (data) => api.post('/payroll/salaries/', data),
+    updateSalary: (id, data) => api.patch(`/payroll/salaries/${id}/`, data),
     getPayslips: (params) => api.get('/payroll/payslips/', { params }),
     getMyPayslips: () => api.get('/payroll/payslips/my_payslips/'),
     generatePayslips: (data) => api.post('/payroll/generate/', data),

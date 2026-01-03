@@ -127,6 +127,13 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
                 {'error': 'Only pending requests can be approved'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+            
+        # Prevent self-approval
+        if leave_request.employee.user == request.user:
+            return Response(
+                {'error': 'You cannot approve your own leave request'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         serializer = LeaveApprovalSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -162,6 +169,13 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
             return Response(
                 {'error': 'Only pending requests can be rejected'},
                 status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Prevent self-rejection (for consistency)
+        if leave_request.employee.user == request.user:
+            return Response(
+                {'error': 'You cannot reject your own leave request'},
+                status=status.HTTP_403_FORBIDDEN
             )
         
         serializer = LeaveApprovalSerializer(data=request.data)

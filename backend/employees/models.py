@@ -25,21 +25,75 @@ class Employee(models.Model):
         ('intern', 'Intern'),
     ]
     
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ]
+    
+    MARITAL_STATUS_CHOICES = [
+        ('single', 'Single'),
+        ('married', 'Married'),
+        ('divorced', 'Divorced'),
+        ('widowed', 'Widowed'),
+    ]
+    
+    # Basic Info
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
         related_name='employee_profile'
     )
-    employee_id = models.CharField(max_length=20, unique=True)
+    employee_id = models.CharField(max_length=20, unique=True, blank=True)
     department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES)
     position = models.CharField(max_length=100)
     employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, default='full_time')
     hire_date = models.DateField()
+    
+    # Contact Info
     phone = models.CharField(max_length=20, blank=True)
+    personal_email = models.EmailField(blank=True)
     address = models.TextField(blank=True)
+    
+    # Manager & Location
+    manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='direct_reports'
+    )
+    company_name = models.CharField(max_length=200, default='Odoo India')
+    location = models.CharField(max_length=200, blank=True)
+    
+    # Private Info
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
+    marital_status = models.CharField(max_length=20, choices=MARITAL_STATUS_CHOICES, blank=True)
+    
+    # Bank Details
+    bank_account = models.CharField(max_length=50, blank=True)
+    bank_name = models.CharField(max_length=100, blank=True)
+    ifsc_code = models.CharField(max_length=20, blank=True)
+    pan_number = models.CharField(max_length=20, blank=True)
+    uan_number = models.CharField(max_length=20, blank=True)
+    epf_code = models.CharField(max_length=30, blank=True)
+    
+    # Profile Sections
+    about_me = models.TextField(blank=True)
+    job_passion = models.TextField(blank=True, help_text="What I love about my job")
+    interests = models.TextField(blank=True, help_text="My interests and hobbies")
+    skills = models.JSONField(default=list, blank=True)
+    certifications = models.JSONField(default=list, blank=True)
+    
+    # Emergency Contact
     emergency_contact_name = models.CharField(max_length=100, blank=True)
     emergency_contact_phone = models.CharField(max_length=20, blank=True)
+    
+    # Media
     profile_image = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -53,12 +107,45 @@ class Employee(models.Model):
         if not self.employee_id:
             # Auto-generate employee ID
             last_emp = Employee.objects.order_by('-id').first()
-            if last_emp:
-                last_id = int(last_emp.employee_id.replace('EMP', ''))
-                self.employee_id = f"EMP{last_id + 1:04d}"
+            if last_emp and last_emp.employee_id:
+                try:
+                    last_id = int(last_emp.employee_id.replace('EMP', ''))
+                    self.employee_id = f"EMP{last_id + 1:04d}"
+                except ValueError:
+                    self.employee_id = "EMP0001"
             else:
                 self.employee_id = "EMP0001"
         super().save(*args, **kwargs)
+    
+    def get_attendance_status(self):
+        """Get today's attendance status for dashboard display."""
+        from attendance.models import Attendance
+        from leaves.models import LeaveRequest
+        from django.utils import timezone
+        
+        today = timezone.now().date()
+        
+        # Check if on approved leave
+        on_leave = LeaveRequest.objects.filter(
+            employee=self,
+            status='approved',
+            start_date__lte=today,
+            end_date__gte=today
+        ).exists()
+        
+        if on_leave:
+            return 'leave'  # Orange dot
+        
+        # Check if checked in today
+        attendance = Attendance.objects.filter(
+            employee=self,
+            date=today
+        ).first()
+        
+        if attendance and attendance.check_in:
+            return 'present'  # Green dot
+        
+        return 'absent'  # Yellow dot
 
 
 class Document(models.Model):
@@ -68,6 +155,7 @@ class Document(models.Model):
         ('contract', 'Employment Contract'),
         ('id_proof', 'ID Proof'),
         ('certificate', 'Certificate'),
+        ('leave_attachment', 'Leave Attachment'),
         ('other', 'Other'),
     ]
     

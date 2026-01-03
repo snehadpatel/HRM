@@ -9,19 +9,27 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from accounts.permissions import IsAdminOrHR, ReadOnlyForEmployee
 from employees.models import Employee
-from .models import SalaryStructure, PaySlip
+from .models import SalaryStructure, SalaryTemplate, PaySlip
 from .serializers import (
     SalaryStructureSerializer,
     SalaryStructureCreateSerializer,
+    SalaryTemplateSerializer,
     PaySlipSerializer,
     GeneratePaySlipSerializer
 )
 
 
+class SalaryTemplateViewSet(viewsets.ModelViewSet):
+    """ViewSet for salary templates - Admin/HR only."""
+    queryset = SalaryTemplate.objects.all()
+    serializer_class = SalaryTemplateSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrHR]
+
+
 class SalaryStructureViewSet(viewsets.ModelViewSet):
     """ViewSet for salary structures - Admin/HR for write, read-only for employees."""
     
-    queryset = SalaryStructure.objects.select_related('employee__user')
+    queryset = SalaryStructure.objects.select_related('employee__user', 'template')
     permission_classes = [IsAuthenticated, ReadOnlyForEmployee]
     
     def get_serializer_class(self):
@@ -150,6 +158,10 @@ class GeneratePaySlipsView(APIView):
             # Get salary structure
             try:
                 salary = SalaryStructure.objects.get(employee=employee, is_active=True)
+                # Check for template
+                if not salary.template:
+                    skipped.append(f"{employee.employee_id} (No Template)")
+                    continue
             except SalaryStructure.DoesNotExist:
                 skipped.append(employee.employee_id)
                 continue
@@ -172,19 +184,21 @@ class GeneratePaySlipsView(APIView):
                 status__in=['present', 'late']
             ).count()
             
-            # Create payslip
+            # Use computed properties from salary structure
             payslip = PaySlip.objects.create(
                 employee=employee,
                 pay_period_start=pay_period_start,
                 pay_period_end=pay_period_end,
+                monthly_wage=salary.monthly_wage,
                 basic_salary=salary.basic_salary,
                 hra=salary.hra,
-                transport_allowance=salary.transport_allowance,
-                medical_allowance=salary.medical_allowance,
-                other_allowances=salary.other_allowances,
+                standard_allowance=salary.standard_allowance_val,
+                performance_bonus=salary.performance_bonus,
+                lta=salary.lta,
+                fixed_allowance=salary.fixed_allowance,
                 gross_salary=salary.gross_salary,
-                pf_deduction=salary.pf_deduction,
-                tax_deduction=salary.tax_deduction,
+                pf_deduction=salary.pf_employee_deduction,
+                professional_tax=salary.professional_tax_val,
                 other_deductions=salary.other_deductions,
                 total_deductions=salary.total_deductions,
                 net_salary=salary.net_salary,

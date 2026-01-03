@@ -70,8 +70,12 @@ WSGI_APPLICATION = 'dayflow.wsgi.application'
 # Database - SQLite for development, PostgreSQL-ready
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'dayflow',
+        'USER': 'snehapatel',
+        'PASSWORD': '',  # No password required for local development
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

@@ -4,7 +4,10 @@ import { useAuth } from '../../context/AuthContext'
 import './Auth.css'
 
 function Login() {
-    const [formData, setFormData] = useState({ email: '', password: '' })
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    })
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const { login } = useAuth()
@@ -34,8 +37,8 @@ function Login() {
             <div className="auth-card">
                 <div className="auth-header">
                     <div className="auth-logo">🌊</div>
-                    <h1>Welcome to Dayflow</h1>
-                    <p>Sign in to your account</p>
+                    <h1>Welcome Back</h1>
+                    <p>Sign in to Dayflow</p>
                 </div>
 
                 {error && <div className="alert alert-error">{error}</div>}
@@ -47,7 +50,7 @@ function Login() {
                             type="email"
                             name="email"
                             className="form-input"
-                            placeholder="Enter your email"
+                            placeholder="name@company.com"
                             value={formData.email}
                             onChange={handleChange}
                             required
@@ -73,11 +76,11 @@ function Login() {
                 </form>
 
                 <div className="auth-footer">
-                    <p>Don't have an account? <Link to="/register">Sign up</Link></p>
+                    <p>Don't have an account? <Link to="/register">Create account</Link></p>
                 </div>
 
                 <div className="demo-accounts">
-                    <h4>Demo Accounts</h4>
+                    <h4>Demo Accounts:</h4>
                     <div className="demo-list">
                         <div className="demo-item">
                             <strong>Admin:</strong> admin@dayflow.com / admin123
@@ -86,7 +89,7 @@ function Login() {
                             <strong>HR:</strong> hr@dayflow.com / hr123456
                         </div>
                         <div className="demo-item">
-                            <strong>Employee:</strong> rahul.sharma@dayflow.com / password123
+                            <strong>Employee:</strong> sarah.johnson@dayflow.com / employee123
                         </div>
                     </div>
                 </div>
