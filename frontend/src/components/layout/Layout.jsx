@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import {
+    LayoutDashboard,
+    Users,
+    Calendar,
+    Clock,
+    Banknote,
+    ChevronLeft,
+    ChevronRight,
+    Briefcase
+} from 'lucide-react'
 import './Layout.css'
 
 function Layout() {
@@ -16,14 +26,14 @@ function Layout() {
     }
 
     const navItems = [
-        { path: '/dashboard', icon: '🏠', label: 'Dashboard' },
-        { path: '/attendance', icon: '⏰', label: 'Attendance' },
-        { path: '/leaves', icon: '📅', label: 'Time Off' },
+        { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+        { path: '/attendance', icon: <Clock size={20} />, label: 'Attendance' },
+        { path: '/leaves', icon: <Calendar size={20} />, label: 'Time Off' },
     ]
 
     if (isAdminOrHR) {
-        navItems.splice(1, 0, { path: '/employees', icon: '👥', label: 'Employees' })
-        navItems.push({ path: '/payroll', icon: '💰', label: 'Payroll' })
+        navItems.splice(1, 0, { path: '/employees', icon: <Users size={20} />, label: 'Employees' })
+        navItems.push({ path: '/payroll', icon: <Banknote size={20} />, label: 'Payroll' })
     }
 
     const getPageTitle = () => {
@@ -44,11 +54,11 @@ function Layout() {
             <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
                 <div className="sidebar-header">
                     <div className="logo">
-                        <span className="logo-icon">🌊</span>
+                        <span className="logo-icon text-primary"><Briefcase size={24} /></span>
                         {!collapsed && <span className="logo-text">Dayflow</span>}
                     </div>
                     <button className="toggle-btn" onClick={() => setCollapsed(!collapsed)}>
-                        {collapsed ? '▶' : '◀'}
+                        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
                     </button>
                 </div>
 

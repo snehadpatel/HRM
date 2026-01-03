@@ -330,21 +330,88 @@ def create_seed_data():
             created_employees.append(employee)
             print(f"  Created employee: {user.full_name} (Login ID: {user.login_id})")
     
-    # Create sample attendance records for today
-    print("Creating sample attendance records...")
-    today = timezone.now().date()
+    # Create sample attendance records for last 30 days
+    print("Creating sample attendance history...")
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
     
-    # Mark some employees as present today
-    for i, employee in enumerate(created_employees[:2]):  # First 2 employees are present
-        check_in_time = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
-        Attendance.objects.get_or_create(
-            employee=employee,
-            date=today,
-            defaults={
-                'check_in': check_in_time,
-                'status': 'present'
-            }
-        )
+    # Include HR and Admin in attendance generation if they have employee records
+    all_employees = list(Employee.objects.all())
+    
+    import random
+    
+    current_date = start_date
+    while current_date <= end_date:
+        # Skip weekends (Saturday and Sunday)
+        if current_date.weekday() >= 5:
+            current_date += timedelta(days=1)
+            continue
+            
+        for emp in all_employees:
+            # 90% chance of being present
+            if random.random() < 0.9:
+                # Randomize check-in between 8:45 AM and 9:30 AM
+                hour_in = 8
+                minute_in = random.randint(45, 59)
+                if random.random() > 0.5:
+                    hour_in = 9
+                    minute_in = random.randint(0, 30)
+                
+                check_in = timezone.now().replace(
+                    year=current_date.year, month=current_date.month, day=current_date.day,
+                    hour=hour_in, minute=minute_in, second=0, microsecond=0
+                )
+                
+                # Randomize check-out between 5:30 PM and 7:00 PM
+                hour_out = 17 # 5 PM
+                minute_out = random.randint(30, 59)
+                if random.random() > 0.3:
+                    hour_out = 18 # 6 PM
+                    minute_out = random.randint(0, 59)
+                
+                check_out = timezone.now().replace(
+                    year=current_date.year, month=current_date.month, day=current_date.day,
+                    hour=hour_out, minute=minute_out, second=0, microsecond=0
+                )
+                
+                # Calculate work hours
+                duration = check_out - check_in
+                work_hours = round(Decimal(duration.total_seconds() / 3600), 2)
+                
+                # If today, maybe haven't checked out yet? 
+                # For demo purposes, let's say everyone has checked out except a few if it's today
+                is_today = (current_date == end_date)
+                
+                if is_today and random.random() > 0.8:
+                     Attendance.objects.get_or_create(
+                        employee=emp,
+                        date=current_date,
+                        defaults={
+                            'check_in': check_in,
+                            'status': 'present'
+                        }
+                    )
+                else:
+                    Attendance.objects.get_or_create(
+                        employee=emp,
+                        date=current_date,
+                        defaults={
+                            'check_in': check_in,
+                            'check_out': check_out,
+                            'status': 'present'
+                        }
+                    )
+            elif random.random() < 0.05:
+                # Mark as absent/leave occasionally
+                Attendance.objects.get_or_create(
+                    employee=emp,
+                    date=current_date,
+                    defaults={
+                        'status': 'leave' if random.random() > 0.5 else 'absent'
+                    }
+                )
+
+        current_date += timedelta(days=1)
     
     print("\nSeed data created successfully!")
     print("\n" + "="*50)

@@ -2,6 +2,33 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { attendanceAPI, employeesAPI, leavesAPI, payrollAPI } from '../services/api'
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    Legend
+} from 'recharts'
+import {
+    CalendarCheck,
+    Clock,
+    TrendingUp,
+    Umbrella,
+    AlertCircle,
+    UserCheck,
+    Users,
+    LogOut,
+    CheckCircle,
+    XCircle,
+    Sun,
+    Moon
+} from 'lucide-react'
 import './Dashboard.css'
 
 function Dashboard() {
@@ -25,6 +52,8 @@ function Dashboard() {
         on_leave: 0,
         pending_leaves: 0
     })
+    const [chartData, setChartData] = useState([])
+    const [leaveDistribution, setLeaveDistribution] = useState([])
 
     useEffect(() => {
         loadDashboardData()
@@ -55,7 +84,7 @@ function Dashboard() {
                 console.log('No attendance data for current user')
             }
 
-            // Load personal stats
+            // Load personal stats AND Chart Data
             try {
                 const [attendanceHistory, leaveBalance, pendingLeaves] = await Promise.all([
                     attendanceAPI.getAll({ start_date: getMonthStart(), end_date: getToday() }),
@@ -73,6 +102,38 @@ function Dashboard() {
                 const leaves = pendingLeaves.data.results || pendingLeaves.data || []
                 const pending = leaves.filter(l => l.status === 'pending').length
 
+                // Process Chart Data (Last 7 days work hours)
+                const last7Days = []
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date()
+                    d.setDate(d.getDate() - i)
+                    const dateStr = d.toISOString().split('T')[0]
+                    const record = monthRecords.find(r => r.date === dateStr)
+                    last7Days.push({
+                        name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                        hours: record ? parseFloat(record.work_hours || 0) : 0
+                    })
+                }
+                setChartData(last7Days)
+
+                // Process Leave Distribution (Mock if empty, or calculate)
+                // Since getting full history, we can aggregate
+                const processedLeaves = leaves.reduce((acc, curr) => {
+                    const type = curr.leave_type_name || 'Other'
+                    acc[type] = (acc[type] || 0) + 1
+                    return acc
+                }, {})
+                const leaveDist = Object.keys(processedLeaves).map(key => ({
+                    name: key,
+                    value: processedLeaves[key]
+                }))
+                // Fallback mock if no leaves
+                setLeaveDistribution(leaveDist.length > 0 ? leaveDist : [
+                    { name: 'Sick', value: 3 },
+                    { name: 'Casual', value: 5 },
+                    { name: 'Privilege', value: 2 },
+                ])
+
                 setMyStats({
                     present_days: presentDays,
                     absent_days: getWorkingDaysInMonth() - presentDays,
@@ -82,7 +143,7 @@ function Dashboard() {
                     avg_daily_hours: presentDays > 0 ? (totalHours / presentDays).toFixed(1) : 0
                 })
             } catch (err) {
-                console.log('Could not load personal stats')
+                console.log('Could not load personal stats', err)
             }
 
         } catch (error) {
@@ -112,6 +173,7 @@ function Dashboard() {
         try {
             const response = await attendanceAPI.checkIn()
             setTodayAttendance(response.data.attendance)
+            // Refresh employee data to show accurate status
             const employeesRes = await employeesAPI.getAll()
             setEmployees(employeesRes.data.results || employeesRes.data || [])
         } catch (error) {
@@ -132,34 +194,23 @@ function Dashboard() {
         navigate(`/employees/${employeeId}`)
     }
 
-    const getStatusDot = (status) => {
-        switch (status) {
-            case 'present':
-                return <span className="status-dot present" title="Present">🟢</span>
-            case 'leave':
-                return <span className="status-dot leave" title="On Leave">🟠</span>
-            case 'absent':
-            default:
-                return <span className="status-dot absent" title="Absent">🟡</span>
-        }
-    }
-
-    if (loading) {
-        return <div className="loading"><div className="spinner"></div></div>
-    }
-
     const isCheckedIn = todayAttendance?.check_in && !todayAttendance?.check_out
     const isCheckedOut = todayAttendance?.check_out
 
     const currentHour = new Date().getHours()
     const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 17 ? 'Good Afternoon' : 'Good Evening'
 
+    const COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b'];
+
     return (
-        <div className="dashboard">
+        <div className="dashboard fade-in">
             {/* Header with Check In/Out */}
             <div className="dashboard-header">
                 <div className="header-left">
-                    <h1 className="page-title">{greeting}, {user?.first_name}!</h1>
+                    <h1 className="page-title flex items-center gap-3">
+                        {currentHour < 18 ? <Sun className="text-warning" size={28} /> : <Moon className="text-primary" size={28} />}
+                        {greeting}, {user?.first_name}!
+                    </h1>
                     <p className="page-subtitle">
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
@@ -167,269 +218,289 @@ function Dashboard() {
                 <div className="header-actions">
                     {!isCheckedOut ? (
                         <button
-                            className={`btn ${isCheckedIn ? 'btn-danger' : 'btn-success'} btn-lg`}
+                            className={`btn ${isCheckedIn ? 'btn-danger' : 'btn-primary'} btn-lg shadow-sm`}
                             onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                         >
-                            {isCheckedIn ? '🚪 Check Out' : '✅ Check In'}
+                            {isCheckedIn ? <LogOut size={18} /> : <Clock size={18} />}
+                            {isCheckedIn ? 'Check Out' : 'Check In'}
                         </button>
                     ) : (
-                        <span className="badge badge-success" style={{ padding: '12px 20px', fontSize: '1rem' }}>
-                            ✓ Day Complete
+                        <span className="badge badge-success flex items-center gap-2 px-4 py-2 text-base">
+                            <CheckCircle size={18} /> Day Complete
                         </span>
                     )}
                 </div>
             </div>
 
-            {/* Personal Stats Summary */}
-            <div className="my-summary-section">
-                <h2>📊 My Work Summary</h2>
-                <div className="summary-grid">
-                    <div className="summary-card">
-                        <div className="summary-icon">📅</div>
-                        <div className="summary-content">
-                            <div className="summary-value">{myStats.present_days}</div>
-                            <div className="summary-label">Days Present (This Month)</div>
-                        </div>
+            {/* Quick Stats Grid */}
+            <div className="stats-grid mb-8">
+                <div className="stat-card">
+                    <div className="stat-icon bg-indigo-100 text-indigo-600">
+                        <CalendarCheck size={24} />
                     </div>
-                    <div className="summary-card">
-                        <div className="summary-icon">⏱️</div>
-                        <div className="summary-content">
-                            <div className="summary-value">{myStats.work_hours_this_month}h</div>
-                            <div className="summary-label">Hours Worked (This Month)</div>
-                        </div>
-                    </div>
-                    <div className="summary-card">
-                        <div className="summary-icon">📈</div>
-                        <div className="summary-content">
-                            <div className="summary-value">{myStats.avg_daily_hours}h</div>
-                            <div className="summary-label">Avg Daily Hours</div>
-                        </div>
-                    </div>
-                    <div className="summary-card">
-                        <div className="summary-icon">🏖️</div>
-                        <div className="summary-content">
-                            <div className="summary-value">{myStats.leave_balance}</div>
-                            <div className="summary-label">Leaves Remaining</div>
-                        </div>
-                    </div>
-                    {myStats.pending_leaves > 0 && (
-                        <div className="summary-card highlight">
-                            <div className="summary-icon">⏳</div>
-                            <div className="summary-content">
-                                <div className="summary-value">{myStats.pending_leaves}</div>
-                                <div className="summary-label">Pending Leave Requests</div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Admin/HR Organization Stats */}
-            {isAdminOrHR && (
-                <div className="org-stats-section">
-                    <h2>🏢 Organization Overview</h2>
-                    <div className="org-stats-grid">
-                        <div className="org-stat-card">
-                            <div className="org-stat-value">{orgStats.total_employees}</div>
-                            <div className="org-stat-label">Total Employees</div>
-                        </div>
-                        <div className="org-stat-card present">
-                            <div className="org-stat-value">{orgStats.present_today}</div>
-                            <div className="org-stat-label">Present Today</div>
-                        </div>
-                        <div className="org-stat-card leave">
-                            <div className="org-stat-value">{orgStats.on_leave}</div>
-                            <div className="org-stat-label">On Leave</div>
-                        </div>
-                        <div className="org-stat-card absent">
-                            <div className="org-stat-value">{orgStats.total_employees - orgStats.present_today - orgStats.on_leave}</div>
-                            <div className="org-stat-label">Absent</div>
-                        </div>
+                    <div>
+                        <div className="stat-value">{myStats.present_days}</div>
+                        <div className="stat-label">Days Present</div>
                     </div>
                 </div>
-            )}
-
-            {/* Today's Check-in Status */}
-            {todayAttendance && (
-                <div className="today-status-section">
-                    <h2>🕐 Today's Status</h2>
-                    <div className="today-status-card">
-                        <div className="status-item">
-                            <span className="status-label">Check In</span>
-                            <span className="status-time">
-                                {todayAttendance.check_in
-                                    ? new Date(todayAttendance.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                    : '--:--'}
-                            </span>
-                        </div>
-                        <div className="status-divider"></div>
-                        <div className="status-item">
-                            <span className="status-label">Check Out</span>
-                            <span className="status-time">
-                                {todayAttendance.check_out
-                                    ? new Date(todayAttendance.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                    : '--:--'}
-                            </span>
-                        </div>
-                        <div className="status-divider"></div>
-                        <div className="status-item">
-                            <span className="status-label">Work Hours</span>
-                            <span className="status-time">{todayAttendance.work_hours || 0}h</span>
-                        </div>
+                <div className="stat-card">
+                    <div className="stat-icon bg-emerald-100 text-emerald-600">
+                        <Clock size={24} />
+                    </div>
+                    <div>
+                        <div className="stat-value">{myStats.work_hours_this_month}h</div>
+                        <div className="stat-label">Hours Worked</div>
                     </div>
                 </div>
-            )}
-
-            {/* Employee Cards Grid */}
-            <div className="employee-cards-section">
-                <h2>👥 Team Members</h2>
-                <div className="employee-cards-grid">
-                    {employees.map((employee) => (
-                        <div
-                            key={employee.id}
-                            className="employee-card"
-                            onClick={() => handleEmployeeClick(employee.id)}
-                        >
-                            {getStatusDot(employee.attendance_status)}
-                            <div className="employee-avatar">
-                                {employee.profile_image ? (
-                                    <img src={employee.profile_image} alt={employee.full_name} />
-                                ) : (
-                                    <div className="avatar-placeholder">
-                                        {employee.full_name?.charAt(0) || '?'}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="employee-name">{employee.full_name}</div>
-                            <div className="employee-position">{employee.position}</div>
-                        </div>
-                    ))}
+                <div className="stat-card">
+                    <div className="stat-icon bg-amber-100 text-amber-600">
+                        <Umbrella size={24} />
+                    </div>
+                    <div>
+                        <div className="stat-value">{myStats.leave_balance}</div>
+                        <div className="stat-label">Leave Balance</div>
+                    </div>
                 </div>
-                {employees.length === 0 && (
-                    <p className="no-data">No employees found</p>
+                {myStats.pending_leaves > 0 && (
+                    <div className="stat-card ring-2 ring-amber-400 ring-offset-2">
+                        <div className="stat-icon bg-orange-100 text-orange-600">
+                            <AlertCircle size={24} />
+                        </div>
+                        <div>
+                            <div className="stat-value">{myStats.pending_leaves}</div>
+                            <div className="stat-label">Pending Requests</div>
+                        </div>
+                    </div>
                 )}
             </div>
 
-            {/* Status Legend */}
-            <div className="status-legend">
-                <div className="legend-item">
-                    <span className="status-dot present">🟢</span>
-                    <span>Present in office</span>
+            {/* Charts Section */}
+            <div className="charts-grid mb-8">
+                <div className="chart-card">
+                    <h3 className="chart-title">Weekly Work Hours</h3>
+                    <div style={{ width: '100%', height: 300 }}>
+                        <ResponsiveContainer>
+                            <AreaChart data={chartData}>
+                                <defs>
+                                    <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                    cursor={{ stroke: '#6366f1', strokeWidth: 1 }}
+                                />
+                                <Area type="monotone" dataKey="hours" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorHours)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
-                <div className="legend-item">
-                    <span className="status-dot leave">🟠</span>
-                    <span>On leave</span>
-                </div>
-                <div className="legend-item">
-                    <span className="status-dot absent">🟡</span>
-                    <span>Absent (no time off applied)</span>
+
+                <div className="chart-card">
+                    <h3 className="chart-title">Leave Distribution</h3>
+                    <div style={{ width: '100%', height: 300 }}>
+                        <ResponsiveContainer>
+                            <PieChart>
+                                <Pie
+                                    data={leaveDistribution}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {leaveDistribution.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
 
-            <style>{`
-                .my-summary-section, .org-stats-section, .today-status-section {
-                    margin-bottom: 32px;
-                }
-                .my-summary-section h2, .org-stats-section h2, .today-status-section h2 {
-                    font-size: 1.1rem;
-                    margin-bottom: 16px;
-                    color: var(--text-primary);
-                }
-                .summary-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 16px;
-                }
-                .summary-card {
-                    background: var(--bg-card);
-                    border: 1px solid var(--border-color);
-                    border-radius: 12px;
-                    padding: 20px;
-                    display: flex;
-                    align-items: center;
-                    gap: 16px;
-                    transition: all 0.2s;
-                }
-                .summary-card:hover {
-                    border-color: var(--primary);
-                    transform: translateY(-2px);
-                }
-                .summary-card.highlight {
-                    background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1));
-                    border-color: #f59e0b;
-                }
-                .summary-icon {
-                    font-size: 2rem;
-                }
-                .summary-value {
-                    font-size: 1.75rem;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                }
-                .summary-label {
-                    font-size: 0.85rem;
-                    color: var(--text-muted);
-                }
+            {/* Admin/HR Stats & Team */}
+            {isAdminOrHR && (
+                <div className="admin-section">
+                    <h2 className="section-title">Organization Overview</h2>
+                    <div className="stats-grid mb-8">
+                        <div className="stat-card">
+                            <div className="stat-icon bg-blue-50 text-blue-600">
+                                <Users size={24} />
+                            </div>
+                            <div>
+                                <div className="stat-value">{orgStats.total_employees}</div>
+                                <div className="stat-label">Total Employees</div>
+                            </div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon bg-green-50 text-green-600">
+                                <UserCheck size={24} />
+                            </div>
+                            <div>
+                                <div className="stat-value">{orgStats.present_today}</div>
+                                <div className="stat-label">Present Today</div>
+                            </div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon bg-orange-50 text-orange-600">
+                                <Umbrella size={24} />
+                            </div>
+                            <div>
+                                <div className="stat-value">{orgStats.on_leave}</div>
+                                <div className="stat-label">On Leave</div>
+                            </div>
+                        </div>
+                    </div>
 
-                .org-stats-grid {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 16px;
-                }
-                .org-stat-card {
-                    background: var(--bg-card);
-                    border: 1px solid var(--border-color);
-                    border-radius: 12px;
-                    padding: 20px;
-                    text-align: center;
-                }
-                .org-stat-card.present { border-left: 4px solid #22c55e; }
-                .org-stat-card.leave { border-left: 4px solid #f97316; }
-                .org-stat-card.absent { border-left: 4px solid #eab308; }
-                .org-stat-value {
-                    font-size: 2rem;
-                    font-weight: 700;
-                    color: var(--text-primary);
-                }
-                .org-stat-label {
-                    font-size: 0.85rem;
-                    color: var(--text-muted);
-                    margin-top: 4px;
-                }
+                    <h2 className="section-title">Team Status</h2>
+                    <div className="employee-cards-grid">
+                        {employees.map((employee) => (
+                            <div
+                                key={employee.id}
+                                className="employee-card"
+                                onClick={() => handleEmployeeClick(employee.id)}
+                            >
+                                <div className={`status-indicator ${employee.attendance_status}`}></div>
+                                <div className="employee-avatar">
+                                    {employee.profile_image ? (
+                                        <img src={employee.profile_image} alt={employee.full_name} />
+                                    ) : (
+                                        <div className="avatar-placeholder">
+                                            {employee.full_name?.charAt(0) || '?'}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="employee-info">
+                                    <div className="employee-name">{employee.full_name}</div>
+                                    <div className="employee-position">{employee.position}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
-                .today-status-card {
-                    background: var(--bg-card);
-                    border: 1px solid var(--border-color);
+            <style jsx>{`
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                    gap: 24px;
+                }
+                .charts-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+                    gap: 24px;
+                }
+                .stat-card {
+                    background: white;
                     border-radius: 12px;
                     padding: 24px;
                     display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                    border: 1px solid var(--border-color);
+                    transition: transform 0.2s;
+                }
+                .stat-card:hover { transform: translateY(-2px); }
+                .stat-icon {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
                     justify-content: center;
-                    gap: 40px;
                 }
-                .status-item {
-                    text-align: center;
+                .stat-value {
+                    font-size: 1.8rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    line-height: 1;
+                    margin-bottom: 4px;
                 }
-                .status-label {
-                    display: block;
-                    font-size: 0.85rem;
-                    color: var(--text-muted);
-                    margin-bottom: 8px;
+                .stat-label {
+                    color: var(--text-secondary);
+                    font-size: 0.9rem;
+                    font-weight: 500;
                 }
-                .status-time {
-                    font-size: 1.5rem;
+                .chart-card {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 24px;
+                    border: 1px solid var(--border-color);
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                }
+                .chart-title {
+                    font-size: 1.1rem;
+                    color: var(--text-primary);
+                    margin-bottom: 24px;
                     font-weight: 600;
-                    color: var(--primary);
                 }
-                .status-divider {
-                    width: 1px;
-                    background: var(--border-color);
+                .section-title {
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    margin-bottom: 20px;
                 }
-
-                @media (max-width: 768px) {
-                    .org-stats-grid { grid-template-columns: repeat(2, 1fr); }
-                    .today-status-card { flex-wrap: wrap; gap: 20px; }
-                    .status-divider { display: none; }
+                
+                /* Employee Cards */
+                .employee-card {
+                    background: white;
+                    border: 1px solid var(--border-color);
+                    border-radius: 12px;
+                    padding: 16px;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    position: relative;
+                    overflow: hidden;
                 }
+                .employee-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                    border-color: var(--primary);
+                }
+                .status-indicator {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    width: 4px;
+                }
+                .status-indicator.present { background: #10b981; }
+                .status-indicator.leave { background: #f59e0b; }
+                .status-indicator.absent { background: #eab308; }
+                
+                .employee-avatar {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 50%;
+                    overflow: hidden;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                .employee-avatar img { width: 100%; height: 100%; object-fit: cover; }
+                .avatar-placeholder {
+                    width: 100%; height: 100%;
+                    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+                    color: #4338ca;
+                    display: flex; align-items: center; justify-content: center;
+                    font-weight: 600;
+                }
+                .employee-info { text-align: left; }
+                .employee-name { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; }
+                .employee-position { color: var(--text-muted); font-size: 0.8rem; }
             `}</style>
         </div>
     )
