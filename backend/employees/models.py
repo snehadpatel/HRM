@@ -104,17 +104,9 @@ class Employee(models.Model):
         return f"{self.employee_id} - {self.user.full_name}"
     
     def save(self, *args, **kwargs):
-        if not self.employee_id:
-            # Auto-generate employee ID
-            last_emp = Employee.objects.order_by('-id').first()
-            if last_emp and last_emp.employee_id:
-                try:
-                    last_id = int(last_emp.employee_id.replace('EMP', ''))
-                    self.employee_id = f"EMP{last_id + 1:04d}"
-                except ValueError:
-                    self.employee_id = "EMP0001"
-            else:
-                self.employee_id = "EMP0001"
+        if not self.employee_id and self.user:
+            # Sync with User's login_id
+            self.employee_id = self.user.login_id
         super().save(*args, **kwargs)
     
     def get_attendance_status(self):

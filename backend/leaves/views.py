@@ -53,7 +53,8 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     
     queryset = LeaveRequest.objects.select_related('employee__user', 'leave_type', 'reviewed_by')
     permission_classes = [IsAuthenticated]
-    
+    pagination_class = None
+
     def get_serializer_class(self):
         if self.action == 'create':
             return LeaveRequestCreateSerializer

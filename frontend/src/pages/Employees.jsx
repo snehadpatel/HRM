@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { employeesAPI } from '../services/api'
+import EmployeeDetailModal from '../components/EmployeeDetailModal'
 
 function Employees() {
     const navigate = useNavigate()
@@ -9,6 +10,7 @@ function Employees() {
     const [showForm, setShowForm] = useState(false)
     const [showEditForm, setShowEditForm] = useState(false)
     const [editingEmployee, setEditingEmployee] = useState(null)
+    const [viewingEmployee, setViewingEmployee] = useState(null)
     const [filter, setFilter] = useState({ department: '', search: '' })
     const [formData, setFormData] = useState({
         email: '',
@@ -130,8 +132,8 @@ function Employees() {
         }
     }
 
-    const handleViewProfile = (id) => {
-        navigate(`/employees/${id}`)
+    const handleViewProfile = (employee) => {
+        setViewingEmployee(employee)
     }
 
     const departments = [
@@ -280,7 +282,7 @@ function Employees() {
                             <div className="card-actions-modern">
                                 <button
                                     className="action-btn-modern view"
-                                    onClick={() => handleViewProfile(emp.id)}
+                                    onClick={() => handleViewProfile(emp)}
                                     title="View Profile"
                                 >
                                     View
@@ -584,6 +586,15 @@ function Employees() {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Employee Detail 360 Modal */}
+            {viewingEmployee && (
+                <EmployeeDetailModal
+                    employee={viewingEmployee}
+                    departments={departments}
+                    onClose={() => setViewingEmployee(null)}
+                />
             )}
 
             <style>{`
